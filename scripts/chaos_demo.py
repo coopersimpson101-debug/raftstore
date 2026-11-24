@@ -160,9 +160,12 @@ def main() -> int:
         c.admin("/admin/snapshot", {})
         t_add = time.monotonic()
         while True:
-            st = Client([dc.url(repl)]).status(dc.url(repl))
-            if st["applied"] >= json.loads(c.request("GET", "/status")[1])["commit"] - 1 and st["keys"] > 0:
+            # the new process may still be binding its port: dc.status() returns None until it answers
+            st = dc.status(repl)
+            if st and st["applied"] >= json.loads(c.request("GET", "/status")[1])["commit"] - 1 and st["keys"] > 0:
                 break
+            if time.monotonic() - t_add > 60:
+                raise TimeoutError(f"'{repl}' did not catch up within 60 s")
             time.sleep(0.2)
         data = Client([dc.url(repl)]).get("photos/2026/holiday.raw", consistency="stale")
         st = Client([dc.url(repl)]).status(dc.url(repl))

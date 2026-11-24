@@ -307,11 +307,19 @@ def _make_certs(d, names):
         pytest.skip("openssl CLI not available to create test certificates")
     run_ = lambda *a: subprocess.run(a, cwd=d, check=True, capture_output=True)  # noqa: E731
     ec = ["-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1", "-nodes"]
-    run_("openssl", "req", "-x509", *ec, "-days", "2", "-subj", "/CN=test-ca", "-keyout", "ca.key", "-out", "ca.pem")
+    # Python >= 3.13 sets VERIFY_X509_STRICT by default: the CA needs keyUsage and every leaf needs
+    # an authority key identifier, otherwise every handshake fails and no leader is ever elected.
+    run_("openssl", "req", "-x509", *ec, "-days", "2", "-subj", "/CN=test-ca",
+         "-addext", "basicConstraints=critical,CA:TRUE", "-addext", "keyUsage=critical,keyCertSign,cRLSign",
+         "-keyout", "ca.key", "-out", "ca.pem")
     for n in names:
+        with open(os.path.join(d, f"{n}.ext"), "w") as f:
+            f.write("basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature\n"
+                    "extendedKeyUsage=serverAuth,clientAuth\nsubjectKeyIdentifier=hash\n"
+                    f"authorityKeyIdentifier=keyid\nsubjectAltName=DNS:{n},IP:127.0.0.1\n")
         run_("openssl", "req", *ec, "-subj", f"/CN={n}", "-keyout", f"{n}.key", "-out", f"{n}.csr")
         run_("openssl", "x509", "-req", "-in", f"{n}.csr", "-CA", "ca.pem", "-CAkey", "ca.key",
-             "-CAcreateserial", "-days", "2", "-out", f"{n}.pem")
+             "-CAcreateserial", "-days", "2", "-extfile", f"{n}.ext", "-out", f"{n}.pem")
 
 
 def test_mutual_tls_cluster(tmp_path):
