@@ -1,0 +1,28 @@
+# Three-node cluster on one Docker host, for trying raftstore out.
+#   docker compose -f deploy/docker-compose.yml up --build
+#   docker compose -f deploy/docker-compose.yml exec nas python -m raftstore --url http://nas:8080,http://pi5:8080,http://server:8080 status --all
+# (run the CLI inside a container: leader redirects point at the container names nas/pi5/server)
+# fault_injection is ON in these configs so you can try POST /debug/fault; never enable it in production.
+services:
+  nas:
+    build: { context: .., dockerfile: deploy/docker/Dockerfile }
+    hostname: nas
+    volumes: [ "./docker/nas.json:/etc/raftstore/node.json:ro", "nas-data:/data" ]
+    ports: [ "8081:8080" ]
+    restart: on-failure
+  pi5:
+    build: { context: .., dockerfile: deploy/docker/Dockerfile }
+    hostname: pi5
+    volumes: [ "./docker/pi5.json:/etc/raftstore/node.json:ro", "pi5-data:/data" ]
+    ports: [ "8082:8080" ]
+    restart: on-failure
+  server:
+    build: { context: .., dockerfile: deploy/docker/Dockerfile }
+    hostname: server
+    volumes: [ "./docker/server.json:/etc/raftstore/node.json:ro", "server-data:/data" ]
+    ports: [ "8083:8080" ]
+    restart: on-failure
+volumes:
+  nas-data: {}
+  pi5-data: {}
+  server-data: {}

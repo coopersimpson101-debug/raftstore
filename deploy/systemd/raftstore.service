@@ -1,0 +1,36 @@
+# /etc/systemd/system/raftstore.service
+# Install on each machine (nas, pi5, server) with its own /etc/raftstore/node.json
+# (copy deploy/config/<name>.json there).
+[Unit]
+Description=raftstore replicated storage node
+Documentation=file:///opt/raftstore/README.md
+Wants=network-online.target
+After=network-online.target local-fs.target
+# make sure the data disk is mounted before we start
+RequiresMountsFor=/var/lib/raftstore
+
+[Service]
+Type=simple
+User=raftstore
+Group=raftstore
+ExecStart=/usr/bin/python3 -m raftstore serve --config /etc/raftstore/node.json
+WorkingDirectory=/opt/raftstore
+Environment=PYTHONPATH=/opt/raftstore
+Environment=PYTHONUNBUFFERED=1
+# Exit code 75 = fail-stop after a storage error (EIO, pulled drive). Do NOT restart in
+# a loop on a dying disk: restart only on other failures; an operator must look at 75.
+Restart=on-failure
+RestartPreventExitStatus=75
+RestartSec=2
+TimeoutStopSec=10
+LimitNOFILE=65536
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/raftstore /srv/raftstore
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

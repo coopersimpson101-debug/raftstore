@@ -1,0 +1,23 @@
+{
+  "id": "nas",
+  "data_dir": "/data",
+  "raft_listen": "0.0.0.0:7000",
+  "http_listen": "0.0.0.0:8080",
+  "initial_cluster": {
+    "nas": {
+      "raft": "nas:7000",
+      "http": "nas:8080"
+    },
+    "pi5": {
+      "raft": "pi5:7000",
+      "http": "pi5:8080"
+    },
+    "server": {
+      "raft": "server:7000",
+      "http": "server:8080"
+    }
+  },
+  "tick_ms": 100,
+  "fault_injection": true,
+  "log_level": "INFO"
+}

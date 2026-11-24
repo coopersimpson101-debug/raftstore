@@ -1,0 +1,16 @@
+# Optional: an extra, on-demand scrub pass (the node also scrubs on its own schedule).
+[Unit]
+Description=raftstore scrub pass on the local node
+After=raftstore.service
+Requires=raftstore.service
+
+[Service]
+Type=oneshot
+User=raftstore
+Environment=PYTHONPATH=/opt/raftstore
+EnvironmentFile=-/etc/raftstore/cli.env
+ExecStart=/usr/bin/python3 -m raftstore --url https://127.0.0.1:8080 --timeout 86400 scrub
+# /etc/raftstore/cli.env (example):
+#   RAFTSTORE_CACERT=/etc/raftstore/tls/ca.pem
+#   RAFTSTORE_CERT=/etc/raftstore/tls/nas.pem
+#   RAFTSTORE_KEY=/etc/raftstore/tls/nas.key

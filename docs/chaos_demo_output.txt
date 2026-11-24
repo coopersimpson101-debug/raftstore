@@ -1,0 +1,25 @@
+[  0.00s] booting 3 local processes (nas, pi5, server); data dirs in a fresh temp directory
+[  1.00s] leader elected: server
+[  1.30s] uploaded photos/2026/holiday.raw: 3145851 bytes in 49 content-addressed chunks (sha256 0b597619dcef9c80...)
+[  3.30s] 243 writes acknowledged so far by 3 concurrent writers
+[  3.31s] PULLING THE DRIVE on leader 'server' (EIO after 5 more writes, last one torn)
+[  3.34s] 'server' fail-stopped with exit code 75 after the I/O error (32 ms) -- it acknowledged nothing it had not fsynced
+[  4.16s] new leader: 'pi5' (844 ms after the pull)
+[  6.16s] writers kept going: 86 more writes acknowledged without 'server'
+[  6.19s] writers stopped: 332 acknowledged, 0 attempts with unknown outcome
+[  7.98s] verify[after drive pull]: 332 acknowledged writes checked with linearizable reads -> ALL PRESENT
+[ 10.36s] photos/2026/holiday.raw still byte-identical
+[ 10.41s] BIT ROT: flipped one bit in chunk 88f3d32edde696a3... on 'nas' (381 chunks referenced there)
+[ 14.19s] scrubber on 'nas': checked=381 corrupt=1 repaired=1 unrepairable=0
+[ 14.19s] chunk re-fetched from a healthy peer and verified by hash: True
+[ 14.19s] REPLACING 'server': its drive is dead; removing it and adding an empty node 'server-new'
+{"config": {"id": "server", "op": "remove"}}
+[ 15.50s] 'server-new' caught up in 1.3s: snapshot_index=721 keys=333 chunks_repaired_from_peers=151; photo identical on server-new: True
+[ 15.50s] voters now: ['nas', 'pi5', 'server-new']
+[ 16.50s] kill -9 the leader 'pi5' during writes
+[ 17.33s] new leader 'nas' after 828 ms
+[ 18.84s] restarted 'pi5' from its WAL
+[ 20.36s] phase-2 writers: 434 acknowledged, 0 attempts with unknown outcome
+[ 20.36s] all nodes converged: nas=commit 1592, pi5=commit 1592, server-new=commit 1592
+[ 21.70s] verify[final]: 766 acknowledged writes checked with linearizable reads -> ALL PRESENT
+[ 21.70s] DONE: no acknowledged write was lost through a pulled drive, bit rot, node replacement and kill -9

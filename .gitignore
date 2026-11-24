@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# local data / test artefacts
+/data/
+*.wal
+*.snap
+*.log
+raftstore-chaos-*/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# never commit real TLS material
+deploy/tls/*.key
+deploy/tls/*.pem

@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install test dependencies (runtime is stdlib-only)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -q pytest hypothesis pyflakes
+      - name: Lint
+        run: .venv/bin/python -m pyflakes raftstore tests scripts
+      - name: Unit, storage, linearizability and fault-injection tests
+        run: .venv/bin/python -m pytest -q -m "not cluster"
+      - name: Multi-process cluster test (kill -9 the leader)
+        run: .venv/bin/python -m pytest -q -s -m cluster
+      - name: Chaos demo (narrated run on real processes)
+        run: .venv/bin/python scripts/chaos_demo.py
+
+  deep-simulation:
+    # more randomized schedules than the default suite; slower, so only on main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m venv .venv
+          .venv/bin/pip install -q pytest hypothesis
+      - name: 300 seeds per simulation scenario
+        env:
+          RAFTSTORE_SIM_SEEDS: "300"
+        run: .venv/bin/python -m pytest -q tests/test_simulation.py
