@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 595" width="1180" height="595" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+<rect x="0.5" y="0.5" width="1179" height="594" rx="10" fill="#0d1117" stroke="#30363d"/>
+<path d="M0.5,40 h1179" stroke="#30363d"/>
+<circle cx="22" cy="20" r="6" fill="#ff5f56"/><circle cx="42" cy="20" r="6" fill="#ffbd2e"/><circle cx="62" cy="20" r="6" fill="#27c93f"/>
+<text x="590.0" y="25" text-anchor="middle" fill="#8b949e" font-size="12.5">chaos_demo.py — 3 real processes on localhost</text>
+<text x="22" y="68" fill="#2DD4BF">$ <tspan fill="#e6edf3">python scripts/chaos_demo.py</tspan></text>
+<text x="22" y="92.0" xml:space="preserve"><tspan fill="#8b949e">[  0.00s]</tspan><tspan fill="#e6edf3"> booting 3 local processes (nas, pi5, server); data dirs in a fresh temp directory</tspan></text>
+<text x="22" y="111.5" xml:space="preserve"><tspan fill="#8b949e">[  1.00s]</tspan><tspan fill="#e6edf3"> leader elected: server</tspan></text>
+<text x="22" y="131.0" xml:space="preserve"><tspan fill="#8b949e">[  1.30s]</tspan><tspan fill="#e6edf3"> uploaded photos/2026/holiday.raw: 3145851 bytes in 49 content-addressed chunks (sha256 0b597619dcef9c80...)</tspan></text>
+<text x="22" y="150.5" xml:space="preserve"><tspan fill="#8b949e">[  3.30s]</tspan><tspan fill="#e6edf3"> 243 writes acknowledged so far by 3 concurrent writers</tspan></text>
+<text x="22" y="170.0" xml:space="preserve"><tspan fill="#8b949e">[  3.31s]</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#f0883e">PULLING THE DRIVE</tspan><tspan fill="#e6edf3"> on leader 'server' (EIO after 5 more writes, last one torn)</tspan></text>
+<text x="22" y="189.5" xml:space="preserve"><tspan fill="#8b949e">[  3.34s]</tspan><tspan fill="#e6edf3"> 'server' </tspan><tspan fill="#f0883e">fail-stopped</tspan><tspan fill="#e6edf3"> with </tspan><tspan fill="#f0883e">exit code 75</tspan><tspan fill="#e6edf3"> after the I/O error (32 ms) -- it acknowledged nothing it had not fsynced</tspan></text>
+<text x="22" y="209.0" xml:space="preserve"><tspan fill="#8b949e">[  4.16s]</tspan><tspan fill="#e6edf3"> new leader: 'pi5' (844 ms after the pull)</tspan></text>
+<text x="22" y="228.5" xml:space="preserve"><tspan fill="#8b949e">[  6.16s]</tspan><tspan fill="#e6edf3"> writers kept going: 86 more writes acknowledged without 'server'</tspan></text>
+<text x="22" y="248.0" xml:space="preserve"><tspan fill="#8b949e">[  6.19s]</tspan><tspan fill="#e6edf3"> writers stopped: 332 acknowledged, 0 attempts with unknown outcome</tspan></text>
+<text x="22" y="267.5" xml:space="preserve"><tspan fill="#8b949e">[  7.98s]</tspan><tspan fill="#e6edf3"> verify[after drive pull]: 332 acknowledged writes checked with </tspan><tspan fill="#2DD4BF">linearizable</tspan><tspan fill="#e6edf3"> reads -&gt; </tspan><tspan fill="#2DD4BF">ALL PRESENT</tspan></text>
+<text x="22" y="287.0" xml:space="preserve"><tspan fill="#8b949e">[ 10.36s]</tspan><tspan fill="#e6edf3"> photos/2026/holiday.raw still </tspan><tspan fill="#2DD4BF">byte-identical</tspan></text>
+<text x="22" y="306.5" xml:space="preserve"><tspan fill="#8b949e">[ 10.41s]</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#f0883e">BIT ROT</tspan><tspan fill="#e6edf3">: flipped one bit in chunk 88f3d32edde696a3... on 'nas' (381 chunks referenced there)</tspan></text>
+<text x="22" y="326.0" xml:space="preserve"><tspan fill="#8b949e">[ 14.19s]</tspan><tspan fill="#e6edf3"> scrubber on 'nas': checked=381 corrupt=1 repaired=1 unrepairable=0</tspan></text>
+<text x="22" y="345.5" xml:space="preserve"><tspan fill="#8b949e">[ 14.19s]</tspan><tspan fill="#e6edf3"> chunk re-fetched from a healthy peer and verified by hash: </tspan><tspan fill="#2DD4BF">True</tspan></text>
+<text x="22" y="365.0" xml:space="preserve"><tspan fill="#8b949e">[ 14.19s]</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#f0883e">REPLACING</tspan><tspan fill="#e6edf3"> 'server': its drive is dead; removing it and adding an empty node 'server-new'</tspan></text>
+<text x="22" y="384.5" xml:space="preserve"><tspan fill="#8b949e"></tspan><tspan fill="#8b949e">{"config": {"id": "server", "op": "remove"}}</tspan></text>
+<text x="22" y="404.0" xml:space="preserve"><tspan fill="#8b949e">[ 15.50s]</tspan><tspan fill="#e6edf3"> 'server-new' caught up in 1.3s: snapshot_index=721 keys=333 chunks_repaired_from_peers=151; photo identical on server-new: </tspan><tspan fill="#2DD4BF">True</tspan></text>
+<text x="22" y="423.5" xml:space="preserve"><tspan fill="#8b949e">[ 15.50s]</tspan><tspan fill="#e6edf3"> voters now: ['nas', 'pi5', 'server-new']</tspan></text>
+<text x="22" y="443.0" xml:space="preserve"><tspan fill="#8b949e">[ 16.50s]</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#f0883e">kill -9</tspan><tspan fill="#e6edf3"> the leader 'pi5' during writes</tspan></text>
+<text x="22" y="462.5" xml:space="preserve"><tspan fill="#8b949e">[ 17.33s]</tspan><tspan fill="#e6edf3"> new leader 'nas' after 828 ms</tspan></text>
+<text x="22" y="482.0" xml:space="preserve"><tspan fill="#8b949e">[ 18.84s]</tspan><tspan fill="#e6edf3"> restarted 'pi5' from its WAL</tspan></text>
+<text x="22" y="501.5" xml:space="preserve"><tspan fill="#8b949e">[ 20.36s]</tspan><tspan fill="#e6edf3"> phase-2 writers: 434 acknowledged, 0 attempts with unknown outcome</tspan></text>
+<text x="22" y="521.0" xml:space="preserve"><tspan fill="#8b949e">[ 20.36s]</tspan><tspan fill="#e6edf3"> all nodes </tspan><tspan fill="#2DD4BF">converged</tspan><tspan fill="#e6edf3">: nas=commit 1592, pi5=commit 1592, server-new=commit 1592</tspan></text>
+<text x="22" y="540.5" xml:space="preserve"><tspan fill="#8b949e">[ 21.70s]</tspan><tspan fill="#e6edf3"> verify[final]: 766 acknowledged writes checked with </tspan><tspan fill="#2DD4BF">linearizable</tspan><tspan fill="#e6edf3"> reads -&gt; </tspan><tspan fill="#2DD4BF">ALL PRESENT</tspan></text>
+<text x="22" y="560.0" xml:space="preserve"><tspan fill="#8b949e">[ 21.70s]</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#2DD4BF">DONE</tspan><tspan fill="#e6edf3">: no acknowledged write was lost through a pulled drive, bit rot, node replacement and </tspan><tspan fill="#f0883e">kill -9</tspan></text>
+</svg>

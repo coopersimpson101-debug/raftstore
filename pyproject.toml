@@ -10,6 +10,30 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = []  # stdlib only at runtime
+authors = [{ name = "the raftstore authors" }]
+keywords = ["raft", "consensus", "distributed-systems", "replication", "storage", "linearizability",
+            "deterministic-simulation", "home-lab"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Database",
+  "Topic :: System :: Distributed Computing",
+  "Topic :: System :: Filesystems",
+]
+
+[project.urls]
+Homepage = "https://github.com/coopersimpson101-debug/raftstore"
+Repository = "https://github.com/coopersimpson101-debug/raftstore"
+Issues = "https://github.com/coopersimpson101-debug/raftstore/issues"
+Documentation = "https://github.com/coopersimpson101-debug/raftstore/tree/main/docs"
 
 [project.optional-dependencies]
 test = ["pytest>=8", "hypothesis>=6"]

@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "raftstore: self-healing replicated storage on a from-scratch Raft"
+authors:
+  - name: "the raftstore authors"
+type: software
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/coopersimpson101-debug/raftstore"
+keywords:
+  - raft
+  - consensus
+  - distributed-systems
+  - replicated-storage
+  - linearizability
+  - deterministic-simulation
