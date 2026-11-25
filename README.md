@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/coopersimpson101-debug/raftstore/actions/workflows/ci.yml"><img src="https://github.com/coopersimpson101-debug/raftstore/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+[![Release](https://img.shields.io/github/v/release/coopersimpson101-debug/raftstore?color=2DD4BF&label=release)](https://github.com/coopersimpson101-debug/raftstore/releases/latest)
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2DD4BF.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-2DD4BF.svg" alt="Python 3.11 | 3.12 | 3.13">
   <img src="https://img.shields.io/badge/dependencies-stdlib%20only-2DD4BF.svg" alt="stdlib only">
