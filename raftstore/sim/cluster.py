@@ -11,6 +11,10 @@ verified to be present on every surviving replica.
 
 Everything flows from one `random.Random(seed)`, so any failure is reproducible
 by re-running the same seed.
+
+`SimCluster(..., trace_path="run.jsonl")` additionally writes a structured
+execution trace of every Raft call on every node (see `raftstore.raft.trace`),
+in the single global order in which the simulator performed them.
 """
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ from dataclasses import dataclass, field
 from ..check.invariants import InvariantChecker
 from ..check.linearizability import Op, check_kv
 from ..raft.core import Raft
+from ..raft.trace import TraceWriter
 from ..raft.types import ENTRY_NORMAL, LEADER, HardState, NotLeader, ProposalDropped
 from ..storage.fs import FaultyFS
 from ..storage.raftlog import DiskStorage, MemoryStorage
@@ -140,7 +145,7 @@ class SimNode:
         if c.cfg.bug_forget_vote:
             hs = HardState(hs.term, None, hs.commit)
         self.raft = Raft(self.id, hard_state=hs, snapshot=snap, entries=ents,
-                         rng=random.Random(c.rng.getrandbits(32)), **c.cfg.raft)
+                         rng=random.Random(c.rng.getrandbits(32)), tracer=c.tracer, **c.cfg.raft)
         self.kv = json.loads(snap.data)["kv"] if snap else {}
         self.pending_writes: dict[int, tuple] = {}
         self.pending_reads: dict[int, Op] = {}
@@ -225,8 +230,12 @@ class SimNode:
 
 
 class SimCluster:
-    def __init__(self, seed: int = 0, cfg: SimConfig | None = None, trace: bool = False):
+    def __init__(self, seed: int = 0, cfg: SimConfig | None = None, trace: bool = False,
+                 trace_path: str | None = None):
         self.seed = seed
+        self.tracer = TraceWriter(trace_path) if trace_path else None
+        if self.tracer is not None:
+            self.tracer.write({"ev": "meta", "seed": seed, "sim": True})
         self.cfg = cfg or SimConfig()
         self.rng = random.Random(seed)
         self.net = SimNetwork(self.rng, self.cfg)
@@ -248,6 +257,14 @@ class SimCluster:
             self.nodes[i] = SimNode(self, i, voters)
 
     # ------------------------------------------------------------- utilities
+    def close_trace(self) -> None:
+        if self.tracer is not None:
+            self.tracer.close()
+            self.tracer = None
+            for n in self.nodes.values():
+                if n.raft is not None:
+                    n.raft.tracer = None
+
     def log(self, msg: str) -> None:
         line = f"[t={self.now:5d}] {msg}"
         self.events.append(line)

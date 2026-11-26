@@ -12,6 +12,7 @@ from urllib.parse import quote
 from .config import NodeConfig
 from .httpd import HttpServer, Request, Response, http_request
 from .raft.core import Raft
+from .raft.trace import TraceWriter
 from .raft.types import ENTRY_CONFIG, ENTRY_NORMAL, LEADER, NotLeader, ProposalDropped, decode_conf
 from .statemachine import BlobStateMachine, encode_chunk_cmd, encode_json_cmd
 from .storage.chunks import ChunkCorrupt, ChunkMissing, ChunkStore
@@ -69,7 +70,8 @@ class StoreNode:
             log.info("%s: bootstrapped new cluster %s", cfg.id, sorted(cfg.initial_cluster))
         self.raft = Raft(cfg.id, hard_state=hs, snapshot=snap, entries=ents,
                          election_ticks=cfg.election_ticks, heartbeat_ticks=cfg.heartbeat_ticks,
-                         read_only=cfg.read_mode, max_msg_bytes=max(1 << 20, cfg.chunk_size * 4))
+                         read_only=cfg.read_mode, max_msg_bytes=max(1 << 20, cfg.chunk_size * 4),
+                         tracer=TraceWriter.from_env(cfg.id))
         if snap is not None:
             self.sm.restore(snap.data)
             self.applied = snap.index

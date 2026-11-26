@@ -11,10 +11,14 @@ stickiness, log replication with fast backtracking (conflict term/index),
 commit of current-term entries only, snapshots / InstallSnapshot / log
 compaction, single-server membership changes, ReadIndex and leader-lease
 linearizable reads, and leadership transfer (TimeoutNow).
+
+Passing ``tracer=TraceWriter(...)`` records every public call as a JSON line
+(see ``raftstore.raft.trace``); with no tracer the hooks cost one attribute check.
 """
 from __future__ import annotations
 
 import bisect
+import functools
 import random
 from dataclasses import dataclass
 
@@ -29,10 +33,37 @@ from .types import (
 _TERM_KEY = lambda e: e.term  # noqa: E731
 
 
+def _traced(name: str, argnames: tuple = ()):
+    """Emit one trace event per outermost public call when `self.tracer` is set."""
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(self, *args, **kw):
+            tr = self.tracer
+            if tr is None or self._tr_depth:
+                return fn(self, *args, **kw)
+            n_msgs, n_reads = len(self.msgs), len(self.read_states)
+            self.log.ops = []
+            self._tr_depth = 1
+            err = None
+            try:
+                return fn(self, *args, **kw)
+            except Exception as e:  # noqa: BLE001 - re-raised below, only recorded here
+                err = type(e).__name__
+                raise
+            finally:
+                self._tr_depth = 0
+                ops, self.log.ops = self.log.ops, None
+                vals = dict(zip(argnames, args))
+                vals.update(kw)
+                tr.event(self, name, self._trace_args(name, vals), n_msgs, n_reads, err, ops)
+        return wrapper
+    return deco
+
+
 class RaftLog:
     """In-memory view of the log: a snapshot prefix plus the entries after it."""
 
-    __slots__ = ("snap_index", "snap_term", "entries", "stable", "commit", "applied")
+    __slots__ = ("snap_index", "snap_term", "entries", "stable", "commit", "applied", "ops")
 
     def __init__(self, snapshot: Snapshot | None, entries: list[Entry]):
         self.snap_index = snapshot.index if snapshot else 0
@@ -45,6 +76,7 @@ class RaftLog:
         self.stable = self.last_index()  # entries <= stable are known durable
         self.commit = self.snap_index
         self.applied = self.snap_index
+        self.ops = None  # list of mutations while a traced call is running
 
     def last_index(self) -> int:
         return self.snap_index + len(self.entries)
@@ -82,6 +114,9 @@ class RaftLog:
         del self.entries[first - self.snap_index - 1:]
         self.entries.extend(ents)
         self.stable = min(self.stable, first - 1)
+        if self.ops is not None:
+            from .trace import entry_json
+            self.ops.append(["append", first, [entry_json(e) for e in ents]])
 
     def unstable(self) -> list[Entry]:
         return self.entries[self.stable - self.snap_index:]
@@ -92,11 +127,15 @@ class RaftLog:
         del self.entries[: index - self.snap_index]
         self.snap_index, self.snap_term = index, term
         self.stable = max(self.stable, index)
+        if self.ops is not None:
+            self.ops.append(["compact", index, term])
 
     def restore(self, s: Snapshot) -> None:
         self.entries = []
         self.snap_index, self.snap_term = s.index, s.term
         self.commit = self.applied = self.stable = s.index
+        if self.ops is not None:
+            self.ops.append(["restore", s.index, s.term])
 
     def is_up_to_date(self, index: int, term: int) -> bool:
         lt = self.last_term()
@@ -144,6 +183,7 @@ class Raft:
         max_msg_entries: int = 64,
         max_msg_bytes: int = 1 << 20,
         unsafe_commit_any_term: bool = False,  # mutation-testing switch; never enable in production
+        tracer=None,  # raftstore.raft.trace.TraceWriter: opt-in structured execution trace
     ):
         if read_only not in ("safe", "lease"):
             raise ValueError("read_only must be 'safe' or 'lease'")
@@ -188,8 +228,40 @@ class Raft:
         self.state = FOLLOWER
         self.leader: str | None = None
         self._reset()
+        self.tracer = tracer
+        self._tr_depth = 0
+        if tracer is not None:
+            from .trace import FORMAT_VERSION, entry_json
+            tracer.event(self, "init", {
+                "format": FORMAT_VERSION,
+                "options": {"prevote": self.prevote, "check_quorum": self.check_quorum,
+                            "read_only": self.read_only, "election_ticks": self.election_ticks,
+                            "heartbeat_ticks": self.heartbeat_ticks,
+                            "unsafe_commit_any_term": self.unsafe_commit_any_term},
+                "hard_state": [hs.term, hs.vote, hs.commit],
+                "snapshot": None if snapshot is None else {
+                    "index": snapshot.index, "term": snapshot.term, "voters": sorted(snapshot.config)},
+                "entries": [entry_json(e) for e in self.log.entries],
+            }, 0, 0, None, None)
 
     # ------------------------------------------------------------------ helpers
+    @staticmethod
+    def _trace_args(name: str, vals: dict) -> dict:
+        from .trace import data_digest, msg_json
+        if name == "step":
+            return {"m": msg_json(vals["m"])}
+        if name == "propose":
+            kind = vals.get("kind", ENTRY_NORMAL)
+            out = {"kind": kind, "digest": data_digest(vals["data"])}
+            if kind == ENTRY_CONFIG:
+                out["conf"] = decode_conf(vals["data"])
+            return out
+        if name == "propose_conf_change":
+            return {"conf": vals["cc"]}
+        if name == "compact":
+            return {"index": vals["index"]}
+        return {k: v for k, v in vals.items()}
+
     @staticmethod
     def bootstrap(voters: dict) -> tuple[HardState, list[Entry]]:
         """Initial durable state shared by every founding member of a cluster."""
@@ -314,6 +386,7 @@ class Raft:
         return "pending"
 
     # --------------------------------------------------------------- public API
+    @_traced("tick", ())
     def tick(self) -> None:
         self.ticks += 1
         if self.state == LEADER:
@@ -343,6 +416,7 @@ class Raft:
             self.heartbeat_elapsed = 0
             self._bcast_heartbeat()
 
+    @_traced("propose", ("data", "kind"))
     def propose(self, data: bytes, kind: int = ENTRY_NORMAL) -> tuple[int, int]:
         """Append a command; returns (index, term).  Raises NotLeader."""
         if self.state != LEADER:
@@ -357,6 +431,7 @@ class Raft:
         self._bcast_append(allow_empty=False)
         return e.index, e.term
 
+    @_traced("propose_conf_change", ("cc",))
     def propose_conf_change(self, cc: dict) -> tuple[int, int]:
         """Single-server membership change: {"op": "add"|"remove", "id": ..., "meta": {...}}."""
         if self.state != LEADER:
@@ -378,6 +453,7 @@ class Raft:
             raise ValueError("op must be add or remove")
         return self.propose(encode_conf(cc), ENTRY_CONFIG)
 
+    @_traced("read_index", ("ctx",))
     def read_index(self, ctx) -> None:
         """Request a linearizable read point; result appears as a ReadState in ready()."""
         if self.state != LEADER:
@@ -399,6 +475,7 @@ class Raft:
         for p in self.progress:
             self._send_append(p)
 
+    @_traced("transfer_leadership", ("target",))
     def transfer_leadership(self, target: str) -> None:
         if self.state != LEADER:
             raise NotLeader(self.leader)
@@ -414,6 +491,7 @@ class Raft:
         else:
             self._send_append(target)
 
+    @_traced("compact", ("index", "data"))
     def compact(self, index: int, data: bytes) -> Snapshot:
         """Called by the application after it applied `index`; drops log <= index."""
         if not (self.log.snap_index < index <= self.log.applied):
@@ -424,6 +502,7 @@ class Raft:
         return snap
 
     # -------------------------------------------------------------------- step
+    @_traced("step", ("m",))
     def step(self, m: Message) -> None:
         if m.dst != self.id:
             return
@@ -695,6 +774,8 @@ class Raft:
         if committed:
             self.log.applied = committed[-1].index
         self.msgs, self.read_states, self.failed_reads = [], [], []
+        if self.tracer is not None:
+            self.tracer.event(self, "ready", {"must_sync": must_sync}, 0, 0, None, None)
         return rd
 
     # ------------------------------------------------------------------ status
