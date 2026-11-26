@@ -78,6 +78,25 @@ refused, redirect, explicit "retry" from a non-leader); timeouts make it indeter
 6. **Replacement node missing chunks** whose chunk entries were compacted into a snapshot before it
    joined but whose manifest applied after. Fixed by queueing repairs when a manifest references absent chunks.
 
+## Execution traces
+
+Every public `Raft` call can be recorded as one JSON line (see `raftstore/raft/trace.py` for the
+schema): the input (a full message for `step`), the messages queued, ReadIndex results released,
+log mutations (`append` / `compact` / `restore`) and the resulting protocol state (term, vote,
+role, commit, snapshot point, voters, per-peer progress, pending reads, ...). `ready` events mark
+where the runtime persisted state, so a restart can be checked against what was durable.
+
+```python
+from raftstore.sim.cluster import SimCluster, SimConfig
+c = SimCluster(7, SimConfig(), trace_path="run.jsonl"); c.run(2000); c.heal(); c.close_trace()
+```
+
+For real processes set `RAFTSTORE_TRACE_DIR=/some/dir` before `raftstore serve`; each node appends
+to `<dir>/<node-id>.jsonl` (lines are flushed, so `kill -9` loses at most a torn final line).
+The traces are validated against a TLA+ specification of this Raft implementation by a separate
+refinement checker. Tracing is off by default and does not consume randomness, so a traced
+simulation follows exactly the same schedule as an untraced one (`tests/test_trace_export.py`).
+
 ## Numbers (measured on the Windows 10 development machine, not on the target hardware)
 
 * Default suite: 187 tests passed in ~2 min; 235 simulated schedules, 3,716 storage crash points.
